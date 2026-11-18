@@ -55,7 +55,6 @@ Tôi là trưởng nhóm, phụ trách vai Kỹ sư cổng: thiết lập repo, 
 - Phối hợp phân tích ba lỗ hổng: từ chối oan ngoài nhánh chi tiền, trạng thái DELIVERED thiếu ngày giao và vượt trần lỗi tự động/hãng/ngày. Yêu cầu triển khai, kiểm tra và tổng hợp cổng vòng 1/vòng 2, monitor, Phiếu C và bộ submission.
 - Giữ kết luận Cải tiến thêm khi S1 hết ticket sai nhưng chi phí/ROI chưa đạt; ghi nhận integrity còn lỗi cần Lab Coach xác minh, không coi bộ nộp đủ thành phần là đã đạt mọi kiểm tra.
 
-**Sử dụng AI:** Tôi dùng ChatGPT/Codex để giải thích yêu cầu, soạn Phiếu A và JSON tiêu chí, soạn các phần phiếu thuộc công việc của tôi và phần tổng hợp, đọc code/trace, trực tiếp hỗ trợ sửa guards.py, thêm monitor, chạy kiểm tra và gom submission. Không trình bày các phần AI soạn hoặc chạy thay là tôi tự viết/chạy hoàn toàn. Nội dung này là bản tổng hợp có AI hỗ trợ; tôi cần rà soát và giải thích được các ngưỡng, cổng và quyết định khi demo.
 
 ### Bằng chứng
 
@@ -67,8 +66,6 @@ Tôi là trưởng nhóm, phụ trách vai Kỹ sư cổng: thiết lập repo, 
 - Grade sau sửa: `R-S1-grade-20261118-172233-7feb82`; S1 65/65 và bộ nền 110/110 đúng, 13 public tests OK, monitor mới hoạt động. S1 cost 8.246đ/ticket, ROI 0,21 chưa đạt; integrity còn lỗi. Thay đổi vòng 2 chưa có mã commit tại thời điểm viết mục này.
 
 ### Exit ticket
-
-*Bản gợi ý để tôi rà soát, sửa theo trải nghiệm thực tế trước khi nộp:*
 
 - **Một điều học được:** Cổng chỉ kiểm lúc hoàn tiền vẫn có thể bỏ sót việc từ chối oan. Cần kiểm cả quyết định không chi tiền và tính nhất quán của dữ liệu nguồn; tỉ lệ đúng cao không thay thế kiểm tiền, quyền lợi đối tác và chi phí vận hành.
 - **Một điều còn chưa chắc:** Khi nhiều yêu cầu cùng ghi lỗi cho một hãng trong production, cần thiết kế kiểm trần và ghi sổ nguyên tử như thế nào để không vượt trần; đồng thời làm sao giảm chi phí xác minh mà vẫn giữ các ngưỡng an toàn đã ký.
