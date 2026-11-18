@@ -231,13 +231,13 @@ Mở lại Phiếu B mục B3. Ghi ở đây những dòng đổi so với vòng
 
 *Mục riêng, không ghi đè HAZOP vòng 1 ở Phiếu B mục B4. Năm guideword và nghĩa của chúng: xem Phiếu B mục B4.*
 
-Tool chọn phân tích: `________________`
+Tool chọn phân tích: `file_carrier_fault`
 
 | Tham số / dòng dữ liệu | Guideword (WRONG / INVALID / INCOMPLETE / PERTURBED / INCAPABLE) | Lệch cụ thể (mã ticket, trường dữ liệu của thẻ) | Hậu quả, cho ai | Hiện có gì ngăn? | Gate đề xuất + tầng |
 |---|---|---|---|---|---|
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| `delay_days` lấy từ ticket thay tracking | WRONG | S1-07@11: DB ghi trễ 4 ngày nhưng `model_override` lấy 2 ngày khách khai; luồng từ chối và không tạo lệnh ghi lỗi dù nhãn cho phép hoàn 21.000đ và ghi VNX/O-2107-P1 | Khách C-14 mất 21.000đ quyền lợi; LogiX bỏ sót lỗi giao trễ hợp lệ của VNX | G1 kiểm `issue_refund`, nhưng nhánh từ chối đi thẳng tới `send_reply`; G2 chỉ chạy nếu có lệnh `file_carrier_fault` | Trước khi gửi từ chối hoặc ghi lỗi, đối chiếu `delay_days` với tracking; nếu ticket và DB lệch thì chuyển NV-HANH xác minh — tầng chặn trước hành động và trả quyền cho người |
+| `delivered_date` cùng `status` của parcel | INCOMPLETE | S1-20@11: O-2120-P1 có `status=DELIVERED`, `delivered_date=null`; helper dùng `as_of` tính 6 ngày, rồi ghi lỗi GHSH cùng khoản hoàn 22.000đ | LogiX mất 22.000đ; GHSH/tài xế chịu lỗi khi số ngày giao thực chưa biết | Legal gate chỉ yêu cầu `delay_cause` thuộc policy; cause `CARRIER` có mặt nên không phát hiện ngày giao thiếu; G2 tái dùng cùng phép tính | Kiểm tính nhất quán status/ngày giao trước `issue_refund` và `file_carrier_fault`; thiếu ngày khi đã giao thì escalate, không dùng `as_of` thay ngày giao — tầng chặn |
+| `fault_rows` theo `carrier_id` và ngày vận hành | INCOMPLETE · nhánh chưa thấy khi chỉ xem một trace | S1-40…S1-43 (`S1-LOAT`) cùng ngày và cùng GHSH; từng parcel đều có thể trễ thật nhưng quyết định ghi lỗi không tính các lỗi đã ghi trước đó; trần tự động là 2 lỗi/hãng/ngày | GHSH có thể bị ghi quá quyền tự động, chịu phạt 150.000đ/lỗi và nguy cơ đình tuyến khi đủ 3 lỗi/7 ngày; NV-OANH phải đối soát | G2 kiểm từng parcel/cause nhưng không đếm lịch sử `fault_rows`; log từng ticket riêng không cảnh báo tổng theo hãng/ngày | Trước lần ghi kế tiếp, đếm lỗi GHSH trong ngày từ `fault_rows`; sau 2 lỗi tự động thì không ghi lỗi thứ 3, chuyển người duyệt và báo NV-TUNG/NV-OANH — tầng giới hạn quyền và vận hành |
 
 Bắt buộc: ít nhất ba dòng, trong đó **một dòng là nhánh bàn chưa thấy trên trace** lúc viết.
 
