@@ -31,9 +31,9 @@ Mỗi lệnh `lab10.eval` và `lab10.grade` tự ghi một dòng vào `runs/jour
 | # | Mã lần chạy | Bộ ticket · mốc | Đổi MỘT thứ gì so với lần trước | pass_rate (khoảng tin cậy 95%) | pass_k | Hoàn sai (đ) · lỗi hãng oan · lộ dữ liệu | Tỉ lệ chuyển người | Kết luận (một câu) |
 |---|---|---|---|---|---|---|---|---|
 | 1 | R-S1-prepared-20261118-164604-0dc81f | S1 · prepared | Nhận S1, chưa sửa cổng vòng 2; grade R-S1-grade-20261118-164604-0dc81f | 0.6154 [0.3077; 0.8462] | 0.6154 | 275.000 · 15 · 0 | 0.3077 | Cổng vòng 1 giảm thiệt hại nhưng S1 còn hỏng; integrity chưa đạt, monitor mới chưa có. |
-| 2 | | Sx · after | | | | | | |
+| 2 | R-S1-after-20261118-172232-7feb82 | S1 · after | Bổ sung ba cổng S1 và monitor | 1.0 [1.0;1.0] | 1.0 | 0 · 0 · 0 | 0.5385 | Hết ticket sai; cost 8.246đ và ROI 0,21 chưa đạt; chưa Tiếp tục. |
 | 3 | | Sx · after | | | | | | |
-| 4 | | base · after | (kiểm không regression) | | | | | |
+| 4 | R-base-after-20261118-172232-7feb82 | base · after | Kiểm regression sau sửa S1 | 1.0 [1.0;1.0] | 1.0 | 0 · 0 · 0 | 0.2364 | Bộ nền 110/110 đúng; cost 4.293đ, ROI 1,33; 13 tests OK. |
 
 ---
 
@@ -320,145 +320,136 @@ Hệ quả: dữ liệu mock đầy đủ hơn thực tế, nên khi chạy th�
 ---
 <a id="c7"></a>
 
-## C7 · Câu 3.5 · Bảng sửa: nguyên nhân → chỗ sửa → giảm hay ngăn
+## C7 · Câu 3.5 · Bảng sửa
 
-Sửa NGOÀI model, đúng chỗ cho từng nguyên nhân. Code: `lab10/guards.py` (`pre_guard`, `write_gate`). Con số và quy trình:
-`config/operating_gates.json` (phạm vi, người trực, trần, ngân sách, kiểm mẫu, ghi chú giải thích, cổng pháp lý). Rồi chạy:
+Report kiểm chứng: `R-S1-after-20261118-172232-7feb82`; regression `R-base-after-20261118-172232-7feb82`; grade cuối `R-S1-grade-20261118-172233-7feb82`. Các thay đổi triển khai trong cùng một phiên bản, không khẳng định đã đo riêng tác động nhân quả của từng cổng.
 
-```bash
-python3 -m lab10.eval --suite Sx --stage after --note "đổi MỘT thứ: ..."
-python3 -m lab10.grade --incident Sx
-```
-
-| Nhánh fault tree | Nguyên nhân | Chỗ sửa (hàm + nhánh trong `guards.py`, hoặc khoá trong `operating_gates.json`) | Tầng (phát hiện / chặn / giới hạn thiệt hại / vận hành) | GIẢM khả năng hay NGĂN hẳn? Vì sao | Mã lần chạy sau khi sửa |
+| Nhánh | Nguyên nhân | Chỗ sửa | Tầng | Giảm hay ngăn? | Bằng chứng |
 |---|---|---|---|---|---|
-| [1] | | | | | |
-| [2] | | | | | |
-| [3] | | | | | |
+| [1] | Cổng bỏ sót từ chối sai | write_gate/send_reply: đối chiếu proposal=0 với quyền lợi DB trừ tiền đã hoàn | Chặn | Ngăn quyết định từ chối sai trong điều kiện dữ liệu/policy đúng; chuyển NV-HANH xác minh | S1 after 65/65 đúng, hoàn thiếu=0 |
+| [2] | DELIVERED thiếu ngày giao | pre_guard: ghi delivered_missing_date và escalate trước đọc/ghi | Phát hiện/chặn | Ngăn suy diễn ngày hiện tại thành ngày giao cho dạng thiếu dữ liệu này; không sửa dữ liệu nguồn | S1 after hoàn sai=0, lỗi hãng oan=0 |
+| [3] | Không kiểm tổng lỗi hãng/ngày | write_gate/file_carrier_fault: fault_rows theo hãng, so trần ops_limits; chạm trần thì deny riêng lệnh lỗi, log carrier_strike_cap_hit | Giới hạn thiệt hại/quyền hạn | Ngăn ghi vượt trần trong sổ giả lập dùng chung; vẫn cho khoản hoàn hợp lệ và tạo tín hiệu để người xác minh | S1 after lỗi hãng oan=0; cần giao dịch nguyên tử khi production song song |
+
+Không sửa model, helpers, nhãn, tiêu chí đã ký hoặc bản chốt vòng 1. Giữ config người/trần/phạm vi vòng 1; chưa tăng người để ép kết quả. Chưa có hệ thống tự động tạo việc duyệt lỗi hãng từ deny: PIC phải xử lý tín hiệu trong runbook.
 
 ---
-
 <a id="c8"></a>
 
-## C8 · Câu 3.6 · Chỉ số theo dõi mới (thước đo → dữ liệu → cách tính)
-
-Thêm **ít nhất một hàm** trong `lab10/monitors.py` và đăng ký vào `MONITORS`. Chỉ số `escalation_rate` có sẵn không tính là chỉ số mới.
-Thẻ S5 dùng mục này cho một con số kinh doanh: chi phí mỗi ticket theo kho (tách tiền máy, công người, tiền mất).
+## C8 · Câu 3.6 · Chỉ số theo dõi mới
 
 | | Chỉ số theo dõi mới của bàn |
 |---|---|
-| **Tên trong `MONITORS`** | |
-| **Bước / hành vi được đo** | |
-| **Thước đo** (một câu, có đơn vị) | |
-| **Dữ liệu** (trường nào của trial, không có nhãn) | |
-| **Cách tính** (công thức, mẫu số, cách xử lý ca thiếu dữ liệu) | |
-| **Khung thời gian / ngưỡng báo động** | |
-| **Điểm mù** (chỉ số này KHÔNG thấy gì) | |
-| Giá trị trên bộ nền · trên thẻ (đọc mục `monitor` của report) | |
+| Tên trong MONITORS | s1_safety_signal_rate |
+| Bước/hành vi | Phát hiện bất nhất dữ liệu/quyết định và chạm giới hạn lỗi hãng |
+| Thước đo | Tỉ lệ trial có ít nhất một tín hiệu rủi ro quan sát được; đơn vị 0–1 |
+| Dữ liệu không nhãn | trial.events: type=model_override hoặc kind thuộc delivered_missing_date, denial_entitlement_mismatch, carrier_strike_cap_hit; không đọc label hoặc trường đúng/sai |
+| Cách tính | Số trial có ít nhất một tín hiệu / max(1,tổng trial); mỗi trial tính một lần dù nhiều sự kiện. Danh sách rỗng trả 0; thiếu events coi là không có tín hiệu nên cần kiểm soát chất lượng telemetry riêng. |
+| Khung thời gian/ngưỡng | Mô phỏng: từng bộ 5 seed. Production đề xuất cửa sổ trượt 24h, kiểm mỗi 15 phút; >0,10 cảnh báo NV-TUNG. Thiếu ngày giao hoặc chạm trần phải xử lý ngay từng sự kiện, không chờ tỉ lệ. Chưa đo/cấu hình được alert service thật. |
+| Điểm mù | Không chứng minh tác hại xảy ra; model_override có thể không gây sai. Không thấy DB sai nhưng nhất quán; giá trị tăng một phần do thêm instrument guard, không diễn giải là hệ thống sau sửa nguy hiểm hơn. |
+| Giá trị bộ nền / S1 | after: 0.045455 / 0.769231. Grade monitor ✅. |
 
 ---
-
 <a id="c9"></a>
 
-## C9 · Câu 3.7 · Fault tree SAU khi sửa (mã lần chạy: `__________`)
+## C9 · Câu 3.7 · Fault tree SAU khi sửa
 
-Vẽ lại cây ở C6. Ở mỗi nhánh đã xử lý, thêm một nút `VÀ [gate … hỏng]` và ghi:
+Mã grade: `R-S1-grade-20261118-172233-7feb82`; after `R-S1-after-20261118-172233-7feb82`.
 
+```text
+[ĐỈNH] Quyền lợi khách hoặc hãng tiếp tục bị quyết định sai
+  HOẶC
+  +-- [1] Model khai giảm độ trễ VÀ kiểm quyền lợi trước send_reply hỏng
+  +-- [2] DELIVERED thiếu ngày giao VÀ pre_guard kiểm dữ liệu hỏng
+  +-- [3] Lỗi dồn cùng hãng/ngày VÀ kiểm trần trên fault_rows hỏng
+  +-- [4] DB sai nhưng nhất quán / người xử lý sai / ghi song song vượt trần
 ```
-[ĐỈNH] ______________________________
- └─ HOẶC
- ├─ [1] ______________ VÀ [gate ______ hỏng]
- ├─ [2] ______________ VÀ [gate ______ hỏng]
- └─ [3] ______________ (còn hở?)
-```
 
-| Nhánh | Gate (hàm trong `guards.py` / khoá config / metric trong `monitors.py`) | Tầng gate (phát hiện / chặn / giới hạn thiệt hại / vận hành) | Giảm hay ngăn? Vì sao | Nhánh còn hở |
+| Nhánh | Gate | Tầng | Giảm hay ngăn? | Còn hở |
 |---|---|---|---|---|
-| [1] | | | | |
-| [2] | | | | |
-| [3] | | | | |
+| [1] | write_gate/send_reply | Chặn | Ngăn dạng từ chối oan đã xác định khi DB/policy đúng | Quyết định sai dạng khác hoặc nguồn sai |
+| [2] | pre_guard DELIVERED/date | Chặn | Ngăn dùng ngày hiện tại thay ngày giao thiếu | Ngày giao nhập sai nhưng có giá trị |
+| [3] | write_gate/file_carrier_fault + log/monitor | Giới hạn/phát hiện | Ngăn vượt 2 lỗi trong sổ mô phỏng nối tiếp | Production đồng thời cần khóa/giao dịch; tín hiệu chưa được nối tới hàng việc thật |
+| [4] | Runbook/người kiểm | Vận hành | Chỉ giảm, chưa có bằng chứng production | Kênh trực, dự phòng chưa xác nhận; integrity chưa giải quyết |
 
 ---
-
 <a id="c10"></a>
 
-## C10 · Câu 3.7 · Risk register (thêm ít nhất 1 dòng sau sự cố)
+## C10 · Câu 3.7 · Risk register
 
-| Rủi ro | Khả năng | Tác động | Người phụ trách (PIC, một người) | Dấu hiệu (metric nào, ngưỡng nào) | Xử lý | Ảnh hưởng bước đánh giá | Nhóm chức năng (GOVERN / MAP / MEASURE / MANAGE) |
+| Rủi ro | Khả năng | Tác động | PIC | Dấu hiệu/ngưỡng | Xử lý | Ảnh hưởng quyết định | Nhóm |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
-
-Quy tắc: **mỗi dòng phải đổi được một quyết định.** Cột "Dấu hiệu" phải là một metric có trong `monitors.py` hoặc trong report.
+| Chuyển nhiều ca làm pilot không đạt hiệu quả | Đã thấy trên S1 | Cao | Hoàng Lam Minh | cost_per_ticket_vnd=8246 >8000; ROI=0.21 <0.25 | Thiết kế luồng xác minh có giải thích, đo lại chi phí trước mở pilot; không hạ tiêu chí | Giữ Cải tiến thêm | MEASURE/MANAGE |
+| Dữ liệu tracking thiếu/mâu thuẫn hoặc quyết định bị override | Đã thấy | Cao | Đinh Thị Hường | s1_safety_signal_rate >0.10; sự kiện delivered_missing_date bất kỳ | Xác minh nguồn; không tự chi tiền khi thiếu bằng chứng | Chưa mở rộng trước kiểm dữ liệu độc lập | MAP/MANAGE |
+| Chạm trần lỗi nhưng không ai nhận xử lý tín hiệu | Có thể | Cao | Nguyễn Thanh Thúy | carrier_strike_cap_hit trong trace; queue_stuck>0 hoặc wait_max>60 | NV-TUNG điều phối NV-OANH đối soát, NV-HANH duyệt phần cần thẩm quyền; xác nhận kênh nhận việc | Chưa Tiếp tục khi chưa diễn tập | GOVERN/MANAGE |
 
 ---
-
 <a id="c11"></a>
 
-## C11 · Câu 3.7 · Cập nhật checklist 9 nhóm việc và Runbook phần 4–5
+## C11 · Câu 3.7 · Checklist và runbook phần 4–5
 
-### Cập nhật checklist (bảng gốc ở Phiếu B mục B5)
-
-Ghi các dòng đổi sau sự cố. Mỗi dòng vẫn phải có một PIC có tên.
-
-| # nhóm | Trạng thái mới (Xong / Chưa / Không áp dụng) | Bằng chứng mới (mã lần chạy, mục phiếu, số trong report) | PIC |
+| # nhóm | Trạng thái mới | Bằng chứng | PIC |
 |---|---|---|---|
-| | | | |
-| | | | |
+| 1 Chất lượng | Xong ở mức bộ thử nhìn thấy | S1 65/65; base 110/110; grade visible còn đỏ vì ROI, không còn ticket sai; hidden chưa chạy | Đinh Thị Hường |
+| 2 Dữ liệu | Chưa đủ cho pilot thật | C3.5 và pre_guard kiểm ngày giao; chưa có audit nguồn thật | Hoàng Lam Minh |
+| 3 Bảo mật | Xong ở bộ thử, chưa bảo đảm production | PII=0; chặn hai trường outbound theo legal config | Nguyễn Thanh Thúy |
+| 4 Quyền hạn | Xong ở mô phỏng | Ghim policy; kiểm approval; trần lỗi hãng; bản prepared còn nguyên | Đinh Thị Hường |
+| 5 Hạ tầng | Chưa | Queue=0 trong mock; chưa có thử tải/dự phòng thật | Nguyễn Thanh Thúy |
+| 6 Chi phí | Chưa | S1 cost=8246, ROI=0.21 chưa đạt | Hoàng Lam Minh |
+| 7 Vận hành | Chưa | Monitor mới ✅; chưa nối alert thực, chưa xác nhận người dự phòng | Nguyễn Thanh Thúy |
+| 8 Con người/pháp lý | Chưa đủ cho pilot thật | S1 lỗi hãng=0, PII=0; còn cần diễn tập khiếu nại và bàn giao tín hiệu chạm trần | Nguyễn Thanh Thúy |
+| 9 Quyết định | Xong bản ghi, chưa phê duyệt pilot | C12 chọn Cải tiến thêm theo bằng chứng; integrity còn lỗi | Đinh Thị Hường |
 
-### Runbook 4 · Sau sự cố trên thẻ (vòng 2)
+### Runbook 4 · Sau sự cố
 
 | Câu hỏi | Trả lời |
 |---|---|
-| Tín hiệu nào ở Runbook 2 (Phiếu B mục B7.5) lẽ ra phải báo trước sự cố này? Nó đã có chưa? | |
-| Bàn thêm hoặc đổi ngưỡng nào, từ bao nhiêu thành bao nhiêu? | |
-| Bàn đổi gì về **người** (số người trực, ai đứng tên, ai được gọi)? | |
-| Bàn đổi gì về **phạm vi** hoặc **quy trình** (kiểm mẫu, ghi chú giải thích, trần)? | |
-| Nói gì với bên thứ ba bị ảnh hưởng (hãng, shop, người nhận, nhân viên duyệt), ai nói, trong bao lâu? | |
-| Dữ liệu cá nhân nào đã rời hệ thống mà không thu hồi được? Báo cho ai? | |
-| Sự cố lộ ra trước qua số máy đo, phản hồi của người, hay đọc nội dung? Nguồn nào bàn chưa có? | |
+| Tín hiệu lẽ ra báo? | Model override, DELIVERED thiếu ngày giao, chạm trần lỗi hãng. Vòng 1 chưa có monitor riêng; vòng 2 thêm s1_safety_signal_rate và sự kiện guard. |
+| Đổi ngưỡng nào? | Không thay acceptance đã ký; thực thi trần môi trường vốn có 2 lỗi tự động/hãng/ngày. Alert đề xuất safety_signal_rate>0,10; không phải ngưỡng cho phép gây hại. |
+| Đổi gì về người? | Giữ 1 người, 6 ca/giờ; NV-HANH duyệt, NV-TUNG giữ công tắc, NV-OANH đối soát; chưa coi người dự phòng đã được bố trí. |
+| Đổi quy trình/phạm vi? | Giữ 100% phạm vi mô phỏng. Thiếu ngày giao chuyển người; quyết định từ chối mâu thuẫn chuyển người; chạm trần chỉ chặn lỗi hãng, giữ khoản hoàn hợp lệ. Không tự gán denied tool thành đã được người duyệt. |
+| Nói gì với hãng, ai, hạn? | NV-OANH tiếp nhận và xác nhận rà soát trong 30 phút, đề nghị chưa áp phạt/đình tuyến khi chưa đối soát; NV-TUNG dừng luồng liên quan trong 5 phút khi có lỗi đỏ; cập nhật kết quả trước hạn 17h của thẻ. Đây là quy trình đề xuất, chưa thực sự liên hệ hãng. |
+| Dữ liệu cá nhân rời hệ thống? | Report S1 PII=0; chưa có bằng chứng rò PII trong gói này, không khẳng định dữ liệu khách thật chưa từng lộ. Nếu phát hiện thì NV-TUNG tắt notify_carrier, NV-OANH điều phối thông báo phù hợp. |
+| Nguồn phát hiện? | Thẻ là khiếu nại đối tác; lab xác minh bằng report, trace và dữ liệu. Chưa có kênh khiếu nại/telemetry production hoạt động thật. |
 
-### Runbook 5 · Ba kịch bản "nếu … thì …" cho tuần đầu chạy thử thật
+### Runbook 5 · Tuần đầu pilot nếu được duyệt sau này
 
-1. Nếu số ticket tăng gấp ___ lần trong một giờ thì: …
-2. Nếu nhà cung cấp LLM lỗi quá ___ phút thì: …
-3. Nếu người duyệt báo không tin một quyết định của trợ lý thì: …
+1. Nếu ticket tăng gấp 3 trong một giờ: NV-TUNG kiểm hàng chờ mỗi 15 phút; 4 ca chờ hoặc chờ>30 phút thì gọi dự phòng đã được xác nhận; nếu không có người thì ngừng mở rộng/nhận ca mới. Quá 60 phút hoặc ùn>0 thì dừng pilot, xử lý tay; đo lại cost/ROI sau đổi người.
+2. Nếu nhà cung cấp LLM lỗi quá 5 phút: không fail-open chi tiền; NV-TUNG dừng thao tác gây rủi ro trong 5 phút, chuyển NV-HANH, giữ bằng chứng lỗi; chỉ bật lại sau kiểm tra và xác nhận đủ công suất. Chưa có giám sát uptime thật, phải triển khai trước pilot.
+3. Nếu người duyệt không tin quyết định: giữ nguyên dữ kiện và trace, NV-HANH đối chiếu policy/tracking; không bật tự động lại chỉ vì điểm tổng cao. NV-TUNG dừng luồng liên quan nếu có lỗi an toàn; quyết định lại sau sửa và chạy regression.
 
 ---
-
 <a id="c12"></a>
 
-## C12 · Quyết định Gate 1 · v2 (phút 185–200)
+## C12 · Quyết định Gate 1 · v2
 
-Quyết định phải khớp bằng chứng và khớp tiêu chí đã ký. Chọn **Tiếp tục** khi report còn dòng vượt trần, hoặc còn ngưỡng đã ký
-chưa đạt, là quyết định không đạt. **Thu hẹp**, **Cải tiến thêm**, **Dừng** có lý do và có số thì đều là quyết định đạt.
-Cột v1 nằm ở Phiếu B mục B8; không sửa cột đó.
-
-| | **v2** (phút 185–200, SAU sự cố) |
+| | v2 |
 |---|---|
-| Commit ký tiêu chí | phải giống v1 |
-| Hash chốt cổng vòng 1 | phải giống v1 |
-| Mã lần chạy dùng làm bằng chứng | thẻ, mốc base: ________ · prepared: ________ · after: ________ |
-| Còn dòng "vượt trần" nào trong report? (hàng chờ, chi phí, ROI, trần tiền, pháp lý) | |
-| Kho hoặc hãng có số xấu nhất: ____. Nếu chỉ nhìn phân khúc này, quyết định có đổi không? *(Khối "theo kho và hãng" trong output `lab10.eval` / `lab10.grade`, hoặc mục `by_segment` trong `report.json`.)* | |
-| Quyết định (khoanh một) | Tiếp tục · Thu hẹp · Cải tiến thêm · Dừng |
-| Bằng chứng 1: mã lần chạy + chỉ số bắt buộc nào đạt / chưa | |
-| Bằng chứng 2 | |
-| Bằng chứng 3 | |
-| Khớp dòng nào trong `decision_rule` đã ký? | |
-| Nếu Thu hẹp: cắt kho nào / còn bao nhiêu phần trăm / mấy người trực, và ticket bị cắt đi đâu | |
-| Nếu Cải tiến thêm: giả thuyết cụ thể (nhánh nào của fault tree) + hạn | |
-| Nếu Dừng: bài học ghi lại | |
-| Ngày quyết định lại (trừ khi Dừng) | |
-| PIC ký | |
+| Commit ký tiêu chí | 618d9d5; hash 4c1f87936146, không đổi |
+| Hash chốt cổng vòng 1 | ae2e5687, không đổi |
+| Mã bằng chứng | Grade R-S1-grade-20261118-172233-7feb82; base R-S1-before-20261118-172233-7feb82; prepared R-S1-prepared-20261118-172233-7feb82; after R-S1-after-20261118-172233-7feb82 |
+| Vượt trần/ngưỡng chưa đạt | S1 ROI 0.21 <0.25, tổng chi phí/ticket 8246 >8000; escalation 0.5385 >0.25 là cảnh báo nice_to_have. Integrity chưa đạt; không có test ẩn. |
+| Phân khúc xấu nhất | HCM cost/ticket=7266 cao nhất trong S1, mọi kho/hãng đều pass=1 và không lỗi an toàn. Bộ nền nhóm ? vẫn 10359đ; chỉ nhìn nhóm này cũng cần cải tiến, chưa có đánh giá phạm vi thu hẹp để kết luận. |
+| Quyết định | **Cải tiến thêm** |
+| Bằng chứng 1 | Grade cuối: S1 pass_rate/pass_k=1.0, hoàn sai/thiếu/lỗi hãng/PII=0; trước sửa prepared pass=0.6154, hoàn sai 275000đ, lỗi hãng 15. |
+| Bằng chứng 2 | S1 cost=8246, ROI=0.21: không đạt hai ngưỡng business_ops; không hạ sàn để Tiếp tục. |
+| Bằng chứng 3 | Base vẫn 110/110, 13 tests OK, monitor ✅; criteria/prepared hash còn nguyên. Grade vẫn FAIL do integrity và visible ROI; chưa chứng minh sẵn sàng production. |
+| decision_rule tương ứng | Cải tiến thêm: có việc cụ thể và hạn; chưa đủ điều kiện Tiếp tục. Không Dừng vì sau sửa không còn lỗi an toàn và cost vẫn dưới làm tay 10000đ. |
+| Nếu Thu hẹp | Không chọn: chưa có phép đo riêng phạm vi thu hẹp hợp lệ. |
+| Nếu Cải tiến thêm | Minh thiết kế quy trình xác minh giảm công duyệt và đo lại cost≤8000, ROI≥0.25; Hường làm rõ integrity với Lab Coach, kiểm dữ liệu thật/held-out; Thúy xác nhận alert và người dự phòng. Hạn 19/11/2026, trước khách thật. |
+| Nếu Dừng | Không áp dụng ở v2; giữ quyền dừng ngay nếu phát hiện lỗi an toàn. |
+| Ngày quyết định lại | 19/11/2026, trước mọi pilot khách thật |
+| PIC | Đinh Thị Hường – trưởng nhóm; bản ghi cho nhóm rà soát, không phải chữ ký phê duyệt triển khai thật |
 
 **Chỉ ở v2**
-- Quyết định đổi hay giữ so với v1? Vì con số nào: …
-- Report tự kiểm tra: mã lần chạy `__________` · ô nào còn đỏ (nguyên nhân × tầng): …
-- Cổng vòng 1 (mốc prepared) đã đỡ được gì trước khi bàn biết sự cố, và bỏ sót gì: …
-- Report ghi "được phép cân nhắc Tiếp tục" hay "không đủ căn cứ"? Quyết định của bàn có khớp không: …
-- Một thứ bộ thử hôm nay chưa đo, và nó ảnh hưởng quyết định ra sao: …
 
-**Ba dòng bắt buộc** (chép nguyên ba câu này sang `submission/submission.json`, mục `three_lines`)
-1. Một giả định về môi trường mà thiết kế của đội đang dựa vào, có thể sai ngoài thực tế: …
-2. Gate của đội chỉ GIẢM khả năng hay thực sự NGĂN được tác hại? Vì sao: …
-3. Vì data là mock, cần đo lại gì trong pilot thật trước Bước đánh giá 2: …
+- Giữ Cải tiến thêm so v1: kỹ thuật đã hết lỗi nhìn thấy nhưng S1 cost/ROI không đạt.
+- Report R-S1-grade-20261118-172233-7feb82: integrity ❌, visible ❌ vì ROI; regression/criteria/monitor ✅; hidden chưa chạy.
+- Prepared giảm tiền sai 985000→275000đ và lỗi hãng 30→15, nhưng bỏ sót từ chối oan, dữ liệu ngày giao thiếu và trần theo hãng/ngày.
+- Report không đủ căn cứ Tiếp tục; quyết định Cải tiến thêm khớp kết quả.
+- Chưa đo việc ghi đồng thời, chất lượng dữ liệu thật và thời gian phản ứng của người; chưa cho pilot thật.
+
+**Ba dòng bắt buộc**
+
+1. Giả định môi trường: Tracking và lịch sử lỗi hãng trong ngày đầy đủ, cập nhật đúng và dùng chung; ngoài thực tế có thể trễ đồng bộ hoặc sai ngày giao.
+2. Giảm hay ngăn: Cổng ngăn ba dạng vi phạm đã nêu khi dữ liệu và sổ dùng chung đúng; chỉ giảm rủi ro tổng thể vì chưa bảo đảm dữ liệu thật, ghi đồng thời và phản ứng người trực.
+3. Đo trong pilot: Đo lại chất lượng tracking, sai lệch quyết định qua kiểm mẫu độc lập, công duyệt và giờ cao điểm, chi phí toàn phần, ROI và tốc độ dừng khi có cảnh báo trước Gate 2.

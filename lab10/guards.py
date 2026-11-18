@@ -37,11 +37,28 @@ def pre_guard(ctx):
     policy = H.effective_policy(ctx.tools.lookup_policies(), ctx.as_of)
     if policy is None:
         return Verdict.escalate("Không tìm thấy chính sách có hiệu lực: chuyển người xác minh")
+    order = ctx.tools.lookup_order(ctx.ticket.get("order_id"))
+    if order:
+        for parcel in order.get("parcels", []):
+            if parcel.get("status") == "DELIVERED" and not parcel.get("delivered_date"):
+                ctx.log("delivered_missing_date", parcel_id=parcel.get("parcel_id"))
+                return Verdict.escalate("Đã giao nhưng thiếu ngày giao: xác minh trước mọi lệnh ghi")
     return Verdict.allow(policy_id=policy["policy_id"])
 
 
 def write_gate(ctx, action):
     tool = action.get("tool")
+    if tool == "send_reply":
+        proposal = next((e for e in reversed(ctx.events) if e.get("type") == "proposal"), None)
+        order = ctx.tools.lookup_order(ctx.ticket.get("order_id"))
+        policy = H.effective_policy(ctx.tools.lookup_policies(), ctx.as_of)
+        if proposal and proposal.get("amount_vnd") == 0 and order and policy:
+            parcel = H.ticket_parcel(order, ctx.ticket, ctx.as_of)
+            expected = H.entitlement_vnd(policy, order, H.db_delay_days(parcel, ctx.as_of), parcel.get("delay_cause"))
+            paid = sum(r["amount_vnd"] for r in ctx.tools.ledger_rows(order_id=order["order_id"]))
+            if expected > paid:
+                ctx.log("denial_entitlement_mismatch")
+                return Verdict.escalate("Từ chối mâu thuẫn quyền lợi theo tracking: chuyển người")
     if tool not in ("issue_refund", "file_carrier_fault"):
         return Verdict.allow()
     order = ctx.tools.lookup_order(action.get("order_id"))
@@ -78,6 +95,10 @@ def write_gate(ctx, action):
             if not valid:
                 return Verdict.escalate("Chưa có phê duyệt hợp lệ cho đúng giao dịch")
     if tool == "file_carrier_fault":
+        cap = ctx.tools.ops_limits().get("max_auto_strikes_per_carrier_per_day")
+        if cap is not None and len(ctx.tools.fault_rows(carrier_id=parcel["carrier_id"])) >= cap:
+            ctx.log("carrier_strike_cap_hit", carrier_id=parcel["carrier_id"], cap=cap)
+            return Verdict.deny("Chạm trần lỗi tự động/hãng/ngày: giữ hoàn hợp lệ, chuyển lỗi hãng sang xác minh thủ công")
         if not H.carrier_at_fault(policy, parcel, delay):
             return Verdict.deny("Tracking và chính sách không đủ căn cứ ghi lỗi hãng")
         if any(action.get(k) != parcel.get(k) for k in ("parcel_id", "carrier_id", "driver_id")) or action.get("delay_days") != delay:

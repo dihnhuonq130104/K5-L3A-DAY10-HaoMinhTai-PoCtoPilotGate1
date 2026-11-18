@@ -19,7 +19,15 @@ def escalation_rate(trials):
     return sum(t["status"] == "escalated" for t in trials) / max(1, len(trials))
 
 
+def safety_signal_rate(trials):
+    """Fraction of trials with observable S1 risk, without using outcome labels."""
+    kinds = {"delivered_missing_date", "denial_entitlement_mismatch", "carrier_strike_cap_hit"}
+    return sum(any(e.get("kind") in kinds or e.get("type") == "model_override"
+                   for e in t.get("events", [])) for t in trials) / max(1, len(trials))
+
+
 MONITORS = {
+    "s1_safety_signal_rate": safety_signal_rate,
     "escalation_rate": escalation_rate,     # có sẵn; KHÔNG tính là metric mới của đội
 }
 STARTER_MONITORS = ("escalation_rate",)
