@@ -58,6 +58,8 @@ Tôi là trưởng nhóm, phụ trách vai Kỹ sư cổng: thiết lập repo, 
 
 ### Bằng chứng
 
+- Khắc phục lỗi xuống dòng Windows: chuyển CRLF → LF cho 23 file, chỉ ghi lại khi bản LF khớp chính xác SHA-256 trong manifest gốc; không đổi nội dung hay bộ kiểm tra. Report `R-S1-grade-20261118-174543-7feb82` chỉ còn lỗi integrity do thiếu S2–S8.
+
 - Commit ký tiêu chí: `618d9d5`; hash tiêu chí `4c1f87936146`.
 - Baseline: `R-base-before-20261118-152709-bde05c`, pass_rate 0.9909, hoàn sai 20.000đ, một lỗi hãng oan; Phiếu B B0–B2.
 - Chốt vòng 1: hash `ae2e5687`; prepared `R-base-prepared-20261118-160153-0dc81f`, pass_rate/pass_k=1.0, không lỗi an toàn.
